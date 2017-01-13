@@ -1,4 +1,6 @@
 #-*- coding: utf-8 -*-
+
+import subprocess
 from fabric.api import *
 from fabric.contrib.console import confirm
 
@@ -9,6 +11,19 @@ env.local_src_path = "/home/hiroaki/working"
 
 def hello(name="world"):
     print("Hello %s" % name)
+
+def get_commit_id():
+    """
+    ~/woking/ディレクトリのmaster branchのcommit idを取得する
+    """
+    with lcd(env.local_src_path): # lcdされないsubprocessだと無効?
+        commit_log = local("git log --graph --oneline", capture=True)
+    print(commit_log)
+    print("--------------------------------------")
+    commit_id = input("Commit ID >>")
+    if not confirm("Do you want to rallback to Commit ID : %s ?" % commit_id):
+        abort("Aborting at rollback request.")
+    return commit_id
 
 def test():
     """
@@ -39,11 +54,12 @@ def deploy():
     with cd(code_dir): # デプロイ先ディレクトリに移動して
         run("git pull ~/repos/working.git master") # リモートで実行する
 
-def rollback(commit_id):
+def rollback():
     """
     working ディレクトリでgit log --graph --onelineしてcommit idを取得すること
     最後のcommitが最初に表示される
     """
+    commit_id = get_commit_id()
     with lcd(env.local_src_path):
         local("git revert %s" % commit_id)
         push()
